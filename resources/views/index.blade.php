@@ -24,9 +24,27 @@
                 </div>
             @endif
 
+            @if (session('uploadResults'))
+                @foreach (session('uploadResults') as $result)
+                    @if ($result['status'] === 'success')
+                        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative my-4"
+                            role="alert">
+                            <strong class="font-bold">Succes!</strong>
+                            <span class="block sm:inline">Afbeelding "{{ $result['name'] }}" is succesvol geüpload.</span>
+                        </div>
+                    @else
+                        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative my-4" role="alert">
+                            <strong class="font-bold">Fout!</strong>
+                            <span class="block sm:inline">Afbeelding "{{ $result['name'] }}" kon niet worden geüpload:
+                                {{ $result['message'] }}</span>
+                        </div>
+                    @endif
+                @endforeach
+            @endif
+
             <div class="px-6 py-5">
                 @if ($images && count($images) > 0)
-                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 @foreach ($images as $image)
                                                 <div
                                                     class="relative group overflow-hidden rounded-lg shadow-lg border border-gray-200 transition-transform duration-300 hover:scale-102 hover:shadow-xl">
@@ -34,15 +52,17 @@
                                                         $imageUrl = Storage::url($image->image_data);
                                                         $imageExists = Storage::disk('public')->exists(str_replace('/storage/', '', $image->image_data));
                                                         if (!$imageExists) {
-                                                        // Generate a random seed based on image ID for consistent yet random images
-                                                        $seed = $image->id * 13;
-                                                        $randomNum = ($seed % 1000) + 1;
-                                                        $width = 640;
-                                                        $height = 480;
-                                                        $imageUrl = "https://source.unsplash.com/random/{$width}x{$height}?sig={$randomNum}";
-                                                        $headers = @get_headers($imageUrl);
-                                                        if (!$headers || strpos($headers[0], '200') === false) {
-                                                        $imageUrl = "https://picsum.photos/seed/{$randomNum}/{$width}/{$height}";}}
+                                                            // Generate a random seed based on image ID for consistent yet random images
+                                                            $seed = $image->id * 13;
+                                                            $randomNum = ($seed % 1000) + 1;
+                                                            $width = 640;
+                                                            $height = 480;
+                                                            $imageUrl = "https://source.unsplash.com/random/{$width}x{$height}?sig={$randomNum}";
+                                                            $headers = @get_headers($imageUrl);
+                                                            if (!$headers || strpos($headers[0], '200') === false) {
+                                                                $imageUrl = "https://picsum.photos/seed/{$randomNum}/{$width}/{$height}";
+                                                            }
+                                                        }
 
                                                     @endphp
 

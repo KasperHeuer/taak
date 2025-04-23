@@ -10,47 +10,68 @@ use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
 use ZipArchive;
 use App\Jobs\ImageUpload;
+use Illuminate\Container\Attributes\DB;
+use Illuminate\Support\Facades\DB as FacadesDB;
 
 class ImageController extends Controller
 {
     // Verwerkt het uploaden van een afbeeldingsbestand
     public function store(Request $request)
     {
+        // Validate the uploaded files
         $request->validate([
-            'image.*' => 'required|image|max:2048',
+            'image.*' => 'required|image|max:2048', // Validate image and max size of 2MB
         ]);
 
         $uploadCount = 0;
 
+        // Check if the request contains image files
         if ($request->hasFile('image') && is_array($request->file('image'))) {
+            // Loop through each uploaded file
             foreach ($request->file('image') as $file) {
-                $path = $file->store('images', 'public');
+                try {
+                    // Store the file in the 'public' disk (this will store it in storage/app/public/images)
+                    $path = $file->store('images', 'public');
 
-                // Sla de afbeelding eerst op als onbewerkt
-                $image = Image::create([
-                    'image_data' => $path,
-                    'processed'  => false,  // Markeer de afbeelding aanvankelijk als onbewerkt
-                ]);
+                    // Create a new image record in the database
 
-                // Zet de taak in de wachtrij om de afbeelding te verwerken
-                ProcessImageUpload::dispatch($image->id);
-                $uploadCount++;
+                    $batchId = uniqid('batch_');
+                    foreach ($request->file('image') as $file) {
+                        Image::create([
+                            'image_data' => null,
+                            'processed'  => false,
+                            'batch_id'   => $batchId,
+                            'error'      => $e->getMessage(),
+                        ]);
+                    }
+                    // Dispatch the job to process the image (resize, optimize, etc.)
+                    ProcessImageUpload::dispatch($image->id);
+
+                    // Increment the count of successfully uploaded images
+                    $uploadCount++;
+                } catch (\Exception $e) {
+                    // Log any errors that occur during the file upload
+                    \Log::error('Error uploading image: ' . $e->getMessage());
+                }
             }
 
-            // Stuur de gebruiker terug naar de homepagina met een succesbericht
+            // After processing all images, redirect with a success message
             return redirect()
                 ->route('home')
                 ->with('success', "$uploadCount foto(s) succesvol geüpload.");
         }
 
+        // If no images are uploaded, redirect with an error message
         return redirect('/create')
             ->with('error', 'Je kan alleen foto’s uploaden');
     }
 
+
     // Gepagineerde weergave van verwerkte afbeeldingen
     public function show()
     {
-        $images = Image::where('processed', true)->cursorPaginate(10);
+        $images = Image::where('processed', true)->cursorPaginate(9);
+        // $images = Image::cursorPaginate(9);
 
         return view('index', ['images' => $images]);
     }
@@ -59,8 +80,9 @@ class ImageController extends Controller
     public function downloadZip($id, $timestamp)
     {
         // Haal alle (meestal één) afbeeldingen op die overeenkomen met id + processed + exact created_at UNIX-timestamp
-        $images = Image::where('processed', true)
-            ->whereRaw('UNIX_TIMESTAMP(created_at) = ?', [$timestamp])
+
+        $images = Image::where('batch_id', $batchId)
+            ->where('processed', true)
             ->get();
 
         if ($images->isEmpty()) {

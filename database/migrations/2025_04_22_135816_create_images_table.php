@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->binary('image_data')->nullable(); // Create image_data column as binary (before modifying to LONGBLOB)
             $table->boolean('processed')->default(false); // Fix the default value for processed column
+            $table->integer('batch_id')->nullable(); // Create batch_id column as integer (before modifying to BIGINT)
             $table->timestamps();
         });
 

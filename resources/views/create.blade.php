@@ -1,6 +1,17 @@
 <x-layout>
     <x-header></x-header>
 
+    @if (session('uploadResults'))
+        @foreach (session('uploadResults') as $result)
+            @if ($result['status'] === 'error')
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative my-4" role="alert">
+                    <strong class="font-bold">Fout!</strong>
+                    <span class="block sm:inline">{{ $result['message'] }}</span>
+                </div>
+            @endif
+        @endforeach
+    @endif
+
     <main class="max-w-md mx-auto py-10 px-4 sm:px-6 lg:px-8">
         <div class="bg-white rounded-lg shadow overflow-hidden">
             <div class="px-6 py-5 border-b border-gray-200">
@@ -28,10 +39,18 @@
                     @csrf
 
                     <div id="image-container">
-                        <x-input type="file" name="image[]" id="image-upload" accept="image/*" label='Kies je afbeelding'>
+                        <x-input type="file" name="image[]" id="image-upload" accept="image/*"
+                            label="Kies je afbeelding" required>
                         </x-input>
+                        <small class="text-gray-500">Maximale bestandsgrootte: 2MB. Maximale afmetingen: 1000x1000
+                            pixels.</small>
                     </div>
 
+                    <div id="progressContainer" style="display: none; margin-top: 1rem;">
+                        <progress id="uploadProgress" value="0" max="100" style="width: 100%;"></progress>
+                        <span id="progressText">0%</span>
+                    </div>
+                    <div id="uploadFeedback" style="margin-top: 1rem;"></div>
                     <div class="mt-4">
                         <label class="inline-flex items-center cursor-pointer">
                             <input type="checkbox" id="add-more-toggle" class="sr-only peer">
@@ -54,7 +73,7 @@
                     </div>
 
                     <div class="mt-6 flex justify-end">
-                        <x-input type='submit' name='submit' value='Verzenden' label=''>
+                        <x-input type="submit" name="submit" value="Verzenden" label="">
                         </x-input>
                     </div>
                 </x-form>
@@ -113,3 +132,48 @@
         });
     </script>
 </x-layout>
+
+<script>
+    document.getElementById('uploadForm').addEventListener('submit', function (e) {
+        e.preventDefault(); // Voorkom standaard formulierverzending
+
+        const form = e.target;
+        const formData = new FormData(form);
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('uploadProgress');
+        const progressText = document.getElementById('progressText');
+        const feedback = document.getElementById('uploadFeedback');
+
+        progressContainer.style.display = 'block';
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', form.action, true);
+
+        // Update voortgang
+        xhr.upload.onprogress = function (event) {
+            if (event.lengthComputable) {
+                const percentComplete = Math.round((event.loaded / event.total) * 100);
+                progressBar.value = percentComplete;
+                progressText.textContent = `${percentComplete}%`;
+            }
+        };
+
+        // Verwerk serverrespons
+        xhr.onload = function () {
+            if (xhr.status === 200) {
+                feedback.innerHTML = '<p>Upload succesvol!</p>';
+            } else {
+                feedback.innerHTML = `<p>Fout bij uploaden: ${xhr.responseText}</p>`;
+            }
+            progressContainer.style.display = 'none';
+        };
+
+        // Foutafhandeling
+        xhr.onerror = function () {
+            feedback.innerHTML = '<p>Er is een netwerkfout opgetreden.</p>';
+            progressContainer.style.display = 'none';
+        };
+
+        xhr.send(formData);
+    });
+</script>
