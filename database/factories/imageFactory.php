@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\image>
  */
-class ImageFactory extends Factory
+class imageFactory extends Factory
 {
     /**
      * Define the model's default state.
@@ -17,7 +17,10 @@ class ImageFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'image_data' => 1,
+            "processed" => false,
+           'created_at' => fake()->dateTime(),
+            'updated_at' => fake()->dateTime(),
         ];
     }
 }

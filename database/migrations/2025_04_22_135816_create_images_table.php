@@ -13,8 +13,13 @@ return new class extends Migration
     {
         Schema::create('images', function (Blueprint $table) {
             $table->id();
+            $table->binary('image_data')->nullable(); // Create image_data column as binary (before modifying to LONGBLOB)
+            $table->boolean('processed')->default(false); // Fix the default value for processed column
             $table->timestamps();
         });
+
+        // After creating the table, modify the column type directly with a DB statement
+        DB::statement("ALTER TABLE images MODIFY image_data LONGBLOB");
     }
 
     /**
